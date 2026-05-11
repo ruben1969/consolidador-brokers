@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consolidador v7 - Portfolio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+    :root {
+        --bg-dark: #0A192F;
+        --card-bg: #112240;
+        --text-primary: #CCD6F6;
+        --text-secondary: #8892B0;
+        --accent: #64FFDA;
+        --balanz: #A7F3D0;
+        --iol: #FBCFE8;
+        --cocos: #BFDBFE;
+        --lemon: #FEF08A;
+        --ripio: #DDD6FE;
+        --naranja: #FED7AA;
+        --mp: #BFDBFE;
+    }
+    
+    * {
+        box-sizing: border-box;
+    }
+    
+    body {
+        background: var(--bg-dark);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        min-height: 100vh;
+    }
+    
+    .glass {
+        background: rgba(17, 34, 64, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(100, 255, 218, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .card-pastel {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .card-pastel:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
+    }
+    
+    input[type="number"], input[type="text"] {
+        background: rgba(10, 25, 47, 0.8);
+        border: 1px solid rgba(100, 255, 218, 0.2);
+        color: var(--text-primary);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s;
+        width: 100%;
+    }
+    
+    input[type="number"]:focus, input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.1);
+    }
+    
+    button {
+        transition: all 0.2s ease;
+    }
+    
+    button:active {
+        transform: scale(0.97);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #64FFDA 0%, #52E3C2 100%);
+        color: #0A192F;
+        font-weight: 600;
+    }
+    
+    .btn-primary:hover {
+        box-shadow: 0 4px 16px rgba(100, 255, 218, 0.4);
+    }
+    
+    .btn-secondary {
+        background: rgba(136, 146, 176, 0.1);
+        border: 1px solid rgba(136, 146, 176, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(136, 146, 176, 0.2);
+        border-color: var(--accent);
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 320px;
+    }
+    
+    @media (max-width: 768px) {
+        .chart-container {
+            height: 280px;
+        }
+    }
+    
+    .stat-value {
+        font-variant-numeric: tabular-nums;
+    }
+    
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(100, 255, 218, 0.2), transparent);
+        margin: 2rem 0;
+    }
+</style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="glass rounded-2xl p-6 mb-6 fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">
+                        <span class="text-[var(--accent)]">Consolidador</span> v7
+                    </h1>
+                    <p class="text-[var(--text-secondary)]">Portfolio unificado: Brokers + Billeteras</p>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <input type="file" id="importFile" accept=".json" class="hidden">
+                    <button onclick="document.getElementById('importFile').click()" class="btn-secondary px-4 py-2 rounded-lg flex-1 md:flex-none">
+                        📥 Importar JSON
+                    </button>
+                    <button onclick="exportData()" class="btn-primary px-4 py-2 rounded-lg flex-1 md:flex-none">
+                        📤 Exportar Backup
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Total General -->
+        <div class="glass rounded-2xl p-6 mb-6 fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <p class="text-[var(--text-secondary)] text-sm mb-1">Total General del Portafolio</p>
+                    <p class="text-4xl font-bold stat-value text-[var(--accent)]" id="totalGeneral">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-[var(--text-secondary)] text-sm mb-1">Total Brokers</p>
+                    <p class="text-2xl font-semibold stat-value" id="totalBrokers">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-[var(--text-secondary)] text-sm mb-1">Total Billeteras</p>
+                    <p class="text-2xl font-semibold stat-value" id="totalWallets">$0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Brokers Section -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span class="w-1 h-8 bg-[var(--accent)] rounded"></span>
+                Brokers
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="brokersContainer">
+                <!-- Broker cards will be injected here -->
+            </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Billeteras Section -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span class="w-1 h-8 bg-gradient-to-b from-[var(--lemon)] to-[var(--mp)] rounded"></span>
+                Billeteras
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="walletsContainer">
+                <!-- Wallet cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-xl font-semibold mb-4">Distribución por Entidad</h3>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-xl font-semibold mb-4">Evolución 7 días</h3>
+                <div class="chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen del Día Table -->
+        <div class="glass rounded-2xl p-6 fade-in">
+            <h3 class="text-xl font-semibold mb-4">Resumen del Día</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-[rgba(100,255,218,0.1)]">
+                            <th class="text-left py-3 px-2 text-[var(--text-secondary)] text-sm font-medium">Entidad</th>
+                            <th class="text-left py-3 px-2 text-[var(--text-secondary)] text-sm font-medium">Tipo</th>
+                            <th class="text-right py-3 px-2 text-[var(--text-secondary)] text-sm font-medium">Total</th>
+                            <th class="text-right py-3 px-2 text-[var(--text-secondary)] text-sm font-medium">% Portfolio</th>
+                            <th class="text-right py-3 px-2 text-[var(--text-secondary)] text-sm font-medium">Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody">
+                        <!-- Table rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-[var(--text-secondary)] text-sm">
+            <p>Consolidador v7 · Datos guardados localmente · <span id="lastUpdate"></span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Estado inicial
+        let state = {
+            brokers: {
+                balanz: { 
+                    name: 'Balanz', 
+                    color: '#A7F3D0',
+                    instruments: {
+                        acciones: 0, bonos: 0, cedears: 0, fci: 0
+                    }
+                },
+                iol: { 
+                    name: 'IOL', 
+                    color: '#FBCFE8',
+                    instruments: {
+                        acciones: 0, bonos: 0, cedears: 0, fci: 0
+                    }
+                },
+                cocos: { 
+                    name: 'Cocos', 
+                    color: '#BFDBFE',
+                    instruments: {
+                        acciones: 0, bonos: 0, cedears: 0, fci: 0
+                    }
+                }
+            },
+            wallets: {
+                lemon: { name: 'Lemon', color: '#FEF08A', cuentaRemunerada: 0 },
+                ripio: { name: 'Ripio', color: '#DDD6FE', cuentaRemunerada: 0 },
+                naranjax: { name: 'Naranja X', color: '#FED7AA', cuentaRemunerada: 0 },
+                mercadopago: { name: 'Mercado Pago', color: '#BFDBFE', cuentaRemunerada: 0 }
+            },
+            history: []
+        };
+
+        let pieChart, lineChart;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            renderBrokers();
+            renderWallets();
+            initCharts();
+            updateAll();
+            updateLastUpdateTime();
+            
+            document.getElementById('importFile').addEventListener('change', importData);
+        });
+
+        // LocalStorage
+        function saveState() {
+            localStorage.setItem('consolidadorV7', JSON.stringify(state));
+            updateLastUpdateTime();
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('consolidadorV7');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed };
+            }
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = `Actualizado ${now.toLocaleTimeString('es-AR')}`;
+        }
+
+        // Renderizado de Brokers
+        function renderBrokers() {
+            const container = document.getElementById('brokersContainer');
+            container.innerHTML = '';
+            
+            Object.entries(state.brokers).forEach(([key, broker]) => {
+                const total = Object.values(broker.instruments).reduce((a, b) => a + b, 0);
+                const card = document.createElement('div');
+                card.className = 'card-pastel rounded-xl p-5';
+                card.style.background = `linear-gradient(135deg, ${broker.color}15 0%, ${broker.color}05 100%)`;
+                card.style.borderColor = `${broker.color}30`;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-bold" style="color: ${broker.color}">${broker.name}</h3>
+                        <div class="text-right">
+                            <p class="text-xs text-[var(--text-secondary)]">Total</p>
+                            <p class="text-lg font-bold stat-value" id="${key}-total">${formatCurrency(total)}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        ${Object.entries(broker.instruments).map(([inst, val]) => `
+                            <div>
+                                <label class="text-xs text-[var(--text-secondary)] capitalize mb-1 block">
+                                    ${inst === 'fci' ? 'FCI' : inst.charAt(0).toUpperCase() + inst.slice(1)}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    value="${val}" 
+                                    step="0.01"
+                                    min="0"
+                                    onchange="updateBrokerValue('${key}', '${inst}', this.value)"
+                                    class="text-sm"
+                                >
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Renderizado de Billeteras
+        function renderWallets() {
+            const container = document.getElementById('walletsContainer');
+            container.innerHTML = '';
+            
+            Object.entries(state.wallets).forEach(([key, wallet]) => {
+                const card = document.createElement('div');
+                card.className = 'card-pastel rounded-xl p-5';
+                card.style.background = `linear-gradient(135deg, ${wallet.color}15 0%, ${wallet.color}05 100%)`;
+                card.style.borderColor = `${wallet.color}30`;
+                
+                card.innerHTML = `
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold mb-2" style="color: ${wallet.color}">${wallet.name}</h3>
+                        <p class="text-xs text-[var(--text-secondary)]">Cuenta Remunerada</p>
+                    </div>
+                    <input 
+                        type="number" 
+                        value="${wallet.cuentaRemunerada}" 
+                        step="0.01"
+                        min="0"
+                        onchange="updateWalletValue('${key}', this.value)"
+                        class="text-sm"
+                    >
+                    <div class="mt-3 pt-3 border-t border-[rgba(255,255,255,0.05)]">
+                        <p class="text-xs text-[var(--text-secondary)]">Total</p>
+                        <p class="text-xl font-bold stat-value" id="${key}-total">${formatCurrency(wallet.cuentaRemunerada)}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Updates
+        function updateBrokerValue(brokerKey, instrument, value) {
+            state.brokers[brokerKey].instruments[instrument] = parseFloat(value) || 0;
+            saveState();
+            updateBrokerTotal(brokerKey);
+            updateAll();
+        }
+
+        function updateWalletValue(walletKey, value) {
+            state.wallets[walletKey].cuentaRemunerada = parseFloat(value) || 0;
+            document.getElementById(`${walletKey}-total`).textContent = formatCurrency(state.wallets[walletKey].cuentaRemunerada);
+            saveState();
+            updateAll();
+        }
+
+        function updateBrokerTotal(brokerKey) {
+            const total = Object.values(state.brokers[brokerKey].instruments).reduce((a, b) => a + b, 0);
+            document.getElementById(`${brokerKey}-total`).textContent = formatCurrency(total);
+        }
+
+        function updateAll() {
+            const totals = calculateTotals();
+            document.getElementById('totalGeneral').textContent = formatCurrency(totals.general);
+            document.getElementById('totalBrokers').textContent = formatCurrency(totals.brokers);
+            document.getElementById('totalWallets').textContent = formatCurrency(totals.wallets);
+            
+            updateSummaryTable(totals);
+            updateCharts(totals);
+        }
+
+        // Cálculos
+        function calculateTotals() {
+            const brokerTotals = {};
+            let totalBrokers = 0;
+            
+            Object.entries(state.brokers).forEach(([key, broker]) => {
+                const total = Object.values(broker.instruments).reduce((a, b) => a + b, 0);
+                brokerTotals[key] = total;
+                totalBrokers += total;
+            });
+            
+            const walletTotals = {};
+            let totalWallets = 0;
+            
+            Object.entries(state.wallets).forEach(([key, wallet]) => {
+                walletTotals[key] = wallet.cuentaRemunerada;
+                totalWallets += wallet.cuentaRemunerada;
+            });
+            
+            return {
+                brokers: totalBrokers,
+                wallets: totalWallets,
+                general: totalBrokers + totalWallets,
+                brokerDetails: brokerTotals,
+                walletDetails: walletTotals
+            };
+        }
+
+        // Summary Table
+        function updateSummaryTable(totals) {
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = '';
+            
+            // Brokers section
+            const brokerHeader = document.createElement('tr');
+            brokerHeader.className = 'border-t-2 border-[rgba(100,255,218,0.2)]';
+            brokerHeader.innerHTML = `
+                <td colspan="5" class="py-3 px-2 font-semibold text-[var(--accent)]">Brokers</td>
+            `;
+            tbody.appendChild(brokerHeader);
+            
+            Object.entries(state.brokers).forEach(([key, broker]) => {
+                const total = totals.brokerDetails[key];
+                const percentage = totals.general > 0 ? (total / totals.general * 100).toFixed(2) : 0;
+                const instruments = Object.entries(broker.instruments)
+                    .filter(([, val]) => val > 0)
+                    .map(([inst, val]) => `${inst}: ${formatCurrency(val)}`)
+                    .join(', ') || 'Sin posiciones';
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)]';
+                row.innerHTML = `
+                    <td class="py-3 px-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full" style="background: ${broker.color}"></span>
+                            <span class="font-medium">${broker.name}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-2 text-[var(--text-secondary)] text-sm">Broker</td>
+                    <td class="py-3 px-2 text-right stat-value font-semibold">${formatCurrency(total)}</td>
+                    <td class="py-3 px-2 text-right stat-value text-[var(--text-secondary)]">${percentage}%</td>
+                    <td class="py-3 px-2 text-right text-xs text-[var(--text-secondary)]">${instruments}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Wallets section
+            const walletHeader = document.createElement('tr');
+            walletHeader.className = 'border-t-2 border-[rgba(100,255,218,0.2)]';
+            walletHeader.innerHTML = `
+                <td colspan="5" class="py-3 px-2 font-semibold text-[var(--accent)]">Billeteras</td>
+            `;
+            tbody.appendChild(walletHeader);
+            
+            Object.entries(state.wallets).forEach(([key, wallet]) => {
+                const total = totals.walletDetails[key];
+                const percentage = totals.general > 0 ? (total / totals.general * 100).toFixed(2) : 0;
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)]';
+                row.innerHTML = `
+                    <td class="py-3 px-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full" style="background: ${wallet.color}"></span>
+                            <span class="font-medium">${wallet.name}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-2 text-[var(--text-secondary)] text-sm">Billetera</td>
+                    <td class="py-3 px-2 text-right stat-value font-semibold">${formatCurrency(total)}</td>
+                    <td class="py-3 px-2 text-right stat-value text-[var(--text-secondary)]">${percentage}%</td>
+                    <td class="py-3 px-2 text-right text-xs text-[var(--text-secondary)]">Cuenta Remunerada</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Total row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'border-t-2 border-[var(--accent)] font-bold';
+            totalRow.innerHTML = `
+                <td class="py-4 px-2" colspan="2">Total General</td>
+                <td class="py-4 px-2 text-right stat-value text-[var(--accent)]">${formatCurrency(totals.general)}</td>
+                <td class="py-4 px-2 text-right stat-value">100%</td>
+                <td class="py-4 px-2"></td>
+            `;
+            tbody.appendChild(totalRow);
+        }
+
+        // Charts
+        function initCharts() {
+            Chart.defaults.color = '#8892B0';
+            Chart.defaults.borderColor = 'rgba(100, 255, 218, 0.1)';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            
+            // Pie Chart - Distribución por Entidad
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#112240',
+                            titleColor: '#CCD6F6',
+                            bodyColor: '#8892B0',
+                            borderColor: 'rgba(100, 255, 218, 0.2)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const value = ctx.parsed;
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return ` ${ctx.label}: ${formatCurrency(value)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Line Chart - Evolución 7 días
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            lineChart = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: getLast7Days(),
+                    datasets: [
+                        {
+                            label: 'Total General',
+                            data: [],
+                            borderColor: '#64FFDA',
+                            backgroundColor: 'rgba(100, 255, 218, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'Total Brokers',
+                            data: [],
+                            borderColor: '#A7F3D0',
+                            backgroundColor: 'rgba(167, 243, 208, 0.05)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Total Billeteras',
+                            data: [],
+                            borderColor: '#FEF08A',
+                            backgroundColor: 'rgba(254, 240, 138, 0.05)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#112240',
+                            titleColor: '#CCD6F6',
+                            bodyColor: '#8892B0',
+                            borderColor: 'rgba(100, 255, 218, 0.2)',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => formatCurrency(value, true)
+                            },
+                            grid: {
+                                color: 'rgba(100, 255, 218, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Cargar historial o inicializar
+            if (state.history.length === 0) {
+                initializeHistory();
+            }
+        }
+
+        function updateCharts(totals) {
+            // Update Pie Chart - 7 entidades: 3 brokers + 4 billeteras
+            const pieLabels = [];
+            const pieData = [];
+            const pieColors = [];
+            
+            Object.entries(state.brokers).forEach(([key, broker]) => {
+                pieLabels.push(broker.name);
+                pieData.push(totals.brokerDetails[key]);
+                pieColors.push(broker.color);
+            });
+            
+            Object.entries(state.wallets).forEach(([key, wallet]) => {
+                pieLabels.push(wallet.name);
+                pieData.push(totals.walletDetails[key]);
+                pieColors.push(wallet.color);
+            });
+            
+            pieChart.data.labels = pieLabels;
+            pieChart.data.datasets[0].data = pieData;
+            pieChart.data.datasets[0].backgroundColor = pieColors;
+            pieChart.update('none');
+            
+            // Update Line Chart - agregar punto del día
+            updateHistoryData(totals);
+        }
+
+        function initializeHistory() {
+            const days = getLast7Days();
+            state.history = days.map(date => ({
+                date,
+                general: 0,
+                brokers: 0,
+                wallets: 0
+            }));
+            saveState();
+        }
+
+        function updateHistoryData(totals) {
+            const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            const lastIndex = state.history.length - 1;
+            
+            if (state.history[lastIndex] && state.history[lastIndex].date === today) {
+                state.history[lastIndex] = {
+                    date: today,
+                    general: totals.general,
+                    brokers: totals.brokers,
+                    wallets: totals.wallets
+                };
+            } else {
+                state.history.push({
+                    date: today,
+                    general: totals.general,
+                    brokers: totals.brokers,
+                    wallets: totals.wallets
+                });
+                if (state.history.length > 7) {
+                    state.history.shift();
+                }
+            }
+            
+            lineChart.data.labels = state.history.map(h => h.date);
+            lineChart.data.datasets[0].data = state.history.map(h => h.general);
+            lineChart.data.datasets[1].data = state.history.map(h => h.brokers);
+            lineChart.data.datasets[2].data = state.history.map(h => h.wallets);
+            lineChart.update('none');
+            
+            saveState();
+        }
+
+        function getLast7Days() {
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                days.push(date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }));
+            }
+            return days;
+        }
+
+        // Import/Export
+        function exportData() {
+            const exportObj = {
+                version: 'v7',
+                timestamp: new Date().toISOString(),
+                data: state
+            };
+            
+            const dataStr = JSON.stringify(exportObj, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `consolidador-v7-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Backup exportado correctamente', 'success');
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    const data = imported.data || imported;
+                    
+                    if (data.brokers && data.wallets) {
+                        state = data;
+                        saveState();
+                        renderBrokers();
+                        renderWallets();
+                        updateAll();
+                        showNotification('Datos importados correctamente', 'success');
+                    } else {
+                        showNotification('Formato de archivo inválido', 'error');
+                    }
+                } catch (err) {
+                    showNotification('Error al leer el archivo', 'error');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        // CSV Export
+        function exportCSV() {
+            const totals = calculateTotals();
+            let csv = 'Entidad,Tipo,Detalle,Valor\n';
+            
+            Object.entries(state.brokers).forEach(([key, broker]) => {
+                Object.entries(broker.instruments).forEach(([inst, val]) => {
+                    csv += `${broker.name},Broker,${inst},${val}\n`;
+                });
+                csv += `${broker.name},Broker,Total,${totals.brokerDetails[key]}\n`;
+            });
+            
+            Object.entries(state.wallets).forEach(([key, wallet]) => {
+                csv += `${wallet.name},Billetera,Cuenta Remunerada,${wallet.cuentaRemunerada}\n`;
+            });
+            
+            csv += `TOTAL GENERAL,Portfolio,Total,${totals.general}\n`;
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `consolidador-v7-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Utilities
+        function formatCurrency(value, compact = false) {
+            if (compact && value >= 1000000) {
+                return `$${(value / 1000000).toFixed(1)}M`;
+            }
+            if (compact && value >= 1000) {
+                return `$${(value / 1000).toFixed(1)}K`;
+            }
+            return new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 fade-in`;
+            notification.style.background = type === 'success' ? '#10B981' : '#EF4444';
+            notification.style.color = 'white';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(-20px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                exportData();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                exportCSV();
+            }
+        });
+    </script>
+</body>
+</html>
